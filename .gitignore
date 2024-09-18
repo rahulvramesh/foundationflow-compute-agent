@@ -1,0 +1,4 @@
+build/
+server_monitor.db
+server-monitor-agent-linux-binaries.tar.gz
+vendor/
