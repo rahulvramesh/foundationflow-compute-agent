@@ -1,10 +1,9 @@
-name: Build and Test Server Monitoring Agent
+name: Build, Test, and Release Server Monitoring Agent
 
 on:
   push:
-    branches: [ main ]
-  pull_request:
-    branches: [ main ]
+    tags:
+      - 'v*' # This will trigger the workflow on pushing tags starting with 'v'
 
 jobs:
 
@@ -34,8 +33,38 @@ jobs:
     - name: Build for all platforms
       run: make build-all
 
-    - name: Upload artifacts
-      uses: actions/upload-artifact@v3
+    - name: Create Release
+      id: create_release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
-        name: server-monitor-agent-binaries
-        path: server-monitor-agent-linux-binaries.tar.gz
+        tag_name: ${{ github.ref }}
+        release_name: Release ${{ github.ref }}
+        draft: false
+        prerelease: false
+
+    - name: Upload Release Asset
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: ./server-monitor-agent-linux-binaries.tar.gz
+        asset_name: server-monitor-agent-linux-binaries.tar.gz
+        asset_content_type: application/gzip
+
+    - name: Upload Individual Binaries
+      run: |
+        for file in build/*; do
+          if [ -f "$file" ]; then
+            filename=$(basename -- "$file")
+            echo "Uploading $filename"
+            curl -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+                 -H "Content-Type: application/octet-stream" \
+                 --data-binary @"$file" \
+                 "${{ steps.create_release.outputs.upload_url }}?name=$filename"
+          fi
+        done
+
+  # The deployment job is removed as releases are now created automatically
