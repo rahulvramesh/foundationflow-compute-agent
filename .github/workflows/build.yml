@@ -1,0 +1,41 @@
+name: Build and Test Server Monitoring Agent
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+
+  build:
+    name: Build and Test
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Set up Go
+      uses: actions/setup-go@v2
+      with:
+        go-version: 1.21
+
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y sqlite3 libsqlite3-dev
+
+    - name: Get dependencies
+      run: make deps
+
+    - name: Run tests
+      run: make test
+
+    - name: Build for all platforms
+      run: make build-all
+
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v2
+      with:
+        name: server-monitor-agent-binaries
+        path: server-monitor-agent-linux-binaries.tar.gz
